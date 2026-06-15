@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>minimal birthday · berta</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      background: #f3f0ea;   /* soft natural light grey-beige */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', -apple-system, 'Segoe UI', 'Roboto', system-ui, Helvetica, sans-serif;
+      padding: 1.5rem;
+    }
+
+    /* main card — ultra clean, airy, minimal */
+    .card {
+      max-width: 560px;
+      width: 100%;
+      background: #ffffff;
+      border-radius: 2rem;
+      box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.02);
+      padding: 2.8rem 2rem 2.8rem;
+      text-align: center;
+      transition: all 0.25s ease;
+      border: 1px solid #e9e5de;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 32px -12px rgba(0, 0, 0, 0.06);
+    }
+
+    /* simple small accent line */
+    .accent-line {
+      width: 40px;
+      height: 2px;
+      background: #dad2c4;
+      margin: 0 auto 1.5rem auto;
+      border-radius: 2px;
+    }
+
+    /* minimalist greeting before click */
+    .initial-text {
+      font-size: 1.1rem;
+      font-weight: 420;
+      color: #b6a48b;
+      letter-spacing: 0.3px;
+      margin-bottom: 1.2rem;
+      text-transform: uppercase;
+    }
+
+    .click-hint {
+      font-size: 0.85rem;
+      font-weight: 400;
+      color: #cbbca8;
+      background: #faf8f4;
+      display: inline-block;
+      padding: 0.4rem 1.2rem;
+      border-radius: 60px;
+      backdrop-filter: blur(2px);
+      letter-spacing: 0.2px;
+    }
+
+    /* flower container + message container */
+    .flower-message-area {
+      margin: 1.2rem 0 0.8rem 0;
+      min-height: 180px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    /* flower drawing — minimal line-art style */
+    .flower-svg {
+      transition: all 0.2s ease;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.02));
+    }
+
+    /* birthday text style: clean, minimal, warm */
+    .birthday-message {
+      font-size: 1.9rem;
+      font-weight: 440;
+      letter-spacing: -0.3px;
+      color: #cf8e5c;
+      background: transparent;
+      padding: 0.2rem 0;
+      line-height: 1.3;
+      font-family: inherit;
+    }
+
+    /* simple fade + scale animation when content appears */
+    @keyframes softAppear {
+      0% {
+        opacity: 0;
+        transform: scale(0.94);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .animate-content {
+      animation: softAppear 0.32s cubic-bezier(0.2, 0.9, 0.4, 1.1) forwards;
+    }
+
+    /* hidden helper class */
+    .hidden-init {
+      opacity: 0;
+      visibility: hidden;
+      position: absolute;
+      pointer-events: none;
+    }
+
+    /* reset visibility for display */
+    .visible {
+      opacity: 1;
+      visibility: visible;
+      position: relative;
+      pointer-events: auto;
+    }
+
+    /* minimal spacing */
+    .footer-space {
+      margin-top: 2rem;
+      font-size: 0.7rem;
+      color: #ddd2c4;
+      letter-spacing: 0.3px;
+    }
+
+    /* click zone feedback */
+    .card:active {
+      transform: scale(0.99);
+      transition: 0.05s;
+    }
+
+    /* small responsiveness */
+    @media (max-width: 480px) {
+      .card {
+        padding: 2rem 1.5rem;
+      }
+      .birthday-message {
+        font-size: 1.6rem;
+      }
+      .flower-message-area {
+        min-height: 160px;
+      }
+      .initial-text {
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="card" id="birthdayCard">
+  <!-- very minimal accent line + subtle greeting -->
+  <div class="accent-line"></div>
+  
+  <div class="initial-text" id="initialPrompt">
+    a soft moment
+  </div>
+  
+  <!-- this area will show the flower & message after click -->
+  <div id="flowerMessageContainer" class="flower-message-area">
+    <!-- initially empty; we will inject flower + text on first click -->
+  </div>
+  
+  <div id="clickHint" class="click-hint">
+    ✦  click anywhere  ✦
+  </div>
+  <div class="footer-space"></div>
+</div>
+
+<script>
+  // Minimalist, clean, no over-emojis: when clicked → shows a simple flower (SVG) 
+  // and the exact text: "happy birthday, bertaaa!" 
+  // It stays visible; clicking again does not duplicate, only shows once (or replaces nicely)
+  
+  const card = document.getElementById('birthdayCard');
+  const container = document.getElementById('flowerMessageContainer');
+  const initialPromptEl = document.getElementById('initialPrompt');
+  const clickHintEl = document.getElementById('clickHint');
+  
+  let hasActivated = false;   // to keep the minimal vibe: only generate content once
+  
+  // Create a minimalist flower SVG (line art style, elegant)
+  function createFlowerSVG() {
+    const svgNS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(svgNS, "svg");
+    svg.setAttribute("width", "80");
+    svg.setAttribute("height", "80");
+    svg.setAttribute("viewBox", "0 0 80 80");
+    svg.classList.add("flower-svg");
+    
+    // flower center (small circle)
+    const center = document.createElementNS(svgNS, "circle");
+    center.setAttribute("cx", "40");
+    center.setAttribute("cy", "40");
+    center.setAttribute("r", "5");
+    center.setAttribute("fill", "#e0b082");
+    center.setAttribute("stroke", "#c48a5c");
+    center.setAttribute("stroke-width", "1");
+    
+    // petals: 5 simple teardrop/ellipse shapes
+    const petalColors = ["#f5d9c1", "#f3cfb0", "#f5d4b5", "#f0cbab", "#f2d2b5"];
+    const angles = [0, 72, 144, 216, 288];
+    const petals = [];
+    
+    angles.forEach((angle, idx) => {
+      const rad = (angle * Math.PI) / 180;
+      const cx = 40 + 18 * Math.cos(rad);
+      const cy = 40 + 18 * Math.sin(rad);
+      const petal = document.createElementNS(svgNS, "ellipse");
+      petal.setAttribute("cx", cx);
+      petal.setAttribute("cy", cy);
+      petal.setAttribute("rx", "10");
+      petal.setAttribute("ry", "14");
+      petal.setAttribute("fill", petalColors[idx % petalColors.length]);
+      petal.setAttribute("stroke", "#d9b48b");
+      petal.setAttribute("stroke-width", "0.8");
+      // rotate petal to face outward
+      const rotation = angle;
+      petal.setAttribute("transform", `rotate(${rotation}, ${cx}, ${cy})`);
+      svg.appendChild(petal);
+    });
+    
+    svg.appendChild(center);
+    
+    // tiny leaf / minimal stem? just a subtle line under
+    const stem = document.createElementNS(svgNS, "line");
+    stem.setAttribute("x1", "40");
+    stem.setAttribute("y1", "45");
+    stem.setAttribute("x2", "40");
+    stem.setAttribute("y2", "68");
+    stem.setAttribute("stroke", "#b7aa8f");
+    stem.setAttribute("stroke-width", "1.6");
+    stem.setAttribute("stroke-linecap", "round");
+    svg.appendChild(stem);
+    
+    // two small leaves
+    const leaf1 = document.createElementNS(svgNS, "path");
+    leaf1.setAttribute("d", "M40 55 Q32 52 28 58 Q34 62 40 58");
+    leaf1.setAttribute("fill", "#c6bc9c");
+    leaf1.setAttribute("stroke", "#b0a27f");
+    leaf1.setAttribute("stroke-width", "0.6");
+    svg.appendChild(leaf1);
+    
+    const leaf2 = document.createElementNS(svgNS, "path");
+    leaf2.setAttribute("d", "M40 57 Q48 54 52 60 Q46 64 40 60");
+    leaf2.setAttribute("fill", "#c6bc9c");
+    leaf2.setAttribute("stroke", "#b0a27f");
+    leaf2.setAttribute("stroke-width", "0.6");
+    svg.appendChild(leaf2);
+    
+    return svg;
+  }
+  
+  // create birthday text element: clean, only the required phrase.
+  function createBirthdayText() {
+    const p = document.createElement("div");
+    p.className = "birthday-message";
+    // exactly as requested: "happy birthday, bertaaa!" with lowercase feel, but exactly the phrase.
+    p.textContent = "happy birthday, bertaaa!";
+    // minimal style: no extra icons, just pure text
+    return p;
+  }
+  
+  // show the flower + message (minimal and aesthetic)
+  function revealBirthdaySurprise() {
+    if (hasActivated) return;  // only reveals once, but we can keep as is: no repetitive spam
+    
+    hasActivated = true;
+    
+    // clear container (just to be tidy, but there was nothing)
+    container.innerHTML = '';
+    
+    // add flower (SVG)
+    const flower = createFlowerSVG();
+    container.appendChild(flower);
+    
+    // add text message
+    const msgElem = createBirthdayText();
+    container.appendChild(msgElem);
+    
+    // apply smooth appearing animation
+    flower.classList.add('animate-content');
+    msgElem.classList.add('animate-content');
+    
+    // change initial prompt and hint after activation (minimal update)
+    if (initialPromptEl) {
+      initialPromptEl.style.opacity = "0.4";
+      initialPromptEl.style.transition = "opacity 0.2s";
+      initialPromptEl.textContent = "✧  for you  ✧";
+    }
+    if (clickHintEl) {
+      clickHintEl.textContent = "♡  already wished  ♡";
+      clickHintEl.style.opacity = "0.6";
+    }
+    
+    // Optional: tiny gentle background glow? not necessary but just crisp.
+    const cardBg = document.querySelector('.card');
+    if (cardBg) {
+      cardBg.style.transition = "background 0.2s";
+      // very subtle change to indicate warmth (barely noticeable)
+      cardBg.style.backgroundColor = "#fefcf9";
+    }
+  }
+  
+  // Click event listener on the whole card
+  card.addEventListener('click', (e) => {
+    e.stopPropagation();
+    revealBirthdaySurprise();
+  });
+  
+  // guarantee that the page loads clean without any extra content.
+  // For a truly minimal initial state: container empty, no flower, no text.
+  // the click will show the flower + happy birthday, bertaaa!
+  // also provide a small visual cue on card hover but simple.
+  
+  // For accessibility & clear state, start with empty container.
+  // Also make sure there's no residual hidden elements.
+  // If user clicks multiple times, we keep the same flower+message visible (no duplication).
+  // but also protect so it doesn't recreate duplicates.
+  // A nice plus: the flower appears once, elegant.
+  
+  // Edge: if someone double clicks rapidly, hasActivated ensures only one creation.
+  // Also the design remains minimalist, no sounds, no over-emoji, only a singular flower and required text.
+  
+  // small additional cleanup: ensure pointer events friendly
+  const style = document.createElement('style');
+  style.textContent = `
+    .flower-svg {
+      display: inline-block;
+      margin-bottom: 0.5rem;
+    }
+    .birthday-message {
+      margin-top: 0.25rem;
+    }
+    .flower-message-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+  `;
+  document.head.appendChild(style);
+</script>
+</body>
+</html>
